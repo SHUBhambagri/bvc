@@ -689,36 +689,6 @@ async def update_order_status(
     
     return {"message": "Order status updated"}
 
-# ===== PAYMENT ROUTES (STRIPE) =====
-
-async def stripe_webhook(request: Request):
-    body = await request.body()
-    signature = request.headers.get("Stripe-Signature")
-    
-    host_url = str(request.base_url)
-    webhook_url = f"{host_url}api/payments/stripe/webhook"
-    stripe_checkout = StripeCheckout(api_key=stripe_api_key, webhook_url=webhook_url)
-    
-    try:
-        webhook_response = await stripe_checkout.handle_webhook(body, signature)
-        
-        # Update transaction and order
-        if webhook_response.payment_status == "paid":
-            transaction = await db.payment_transactions.find_one({"session_id": webhook_response.session_id})
-            if transaction and transaction["payment_status"] != "paid":
-                await db.payment_transactions.update_one(
-                    {"session_id": webhook_response.session_id},
-                    {"$set": {"payment_status": "paid"}}
-                )
-                
-                await db.orders.update_one(
-                    {"id": transaction["order_id"]},
-                    {"$set": {"payment_status": "paid"}}
-                )
-        
-        return {"status": "success"}
-    except Exception as e:
-        raise HTTPException(status_code=400, detail=str(e))
 
 # ===== PAYMENT ROUTES (RAZORPAY) =====
 
