@@ -9,4 +9,3 @@ passlib[bcrypt]
 bcrypt
 email-validator
 python-multipart
-motor==4.3.0
