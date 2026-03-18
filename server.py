@@ -18,9 +18,16 @@ ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
 
 # MongoDB connection
-mongo_url = os.environ['MONGO_URL']
+mongo_url = os.environ.get('MONGO_URL')
+
+if not mongo_url:
+    raise Exception("MONGO_URL not set in environment")
+
 client = AsyncIOMotorClient(mongo_url)
-db = client[os.environ['DB_NAME']]
+
+# Use default DB if DB_NAME not set
+db_name = os.environ.get('DB_NAME', 'wallpix')
+db = client[db_name]
 
 # Security
 pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
@@ -583,10 +590,7 @@ async def get_all_coupons(admin = Depends(get_current_admin)):
 @api_router.post("/orders/create")
 async def create_order(order_data: OrderCreate, current_user: Optional[User] = None):
     # For guest checkout, current_user will be None
-    try:
-        current_user = await get_current_user(security)
-    except:
-        current_user = None
+    current_user = None
     
     # Calculate total
     total = sum(item["price"] * item["quantity"] for item in order_data.items)
